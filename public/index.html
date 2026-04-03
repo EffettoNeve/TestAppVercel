@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shot List Generator — AI-powered for filmmakers</title>
+  <meta name="description" content="Generate professional shot lists instantly. Describe your scene and get camera angles, movements, lens suggestions and timing — free for filmmakers, YouTubers and directors." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1e1e1e;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.18);
+      --text: #f0ede8;
+      --muted: #7a7570;
+      --accent: #c8b89a;
+      --accent-dim: rgba(200,184,154,0.12);
+      --danger: #e05a4a;
+      --success: #4aaa7a;
+      --mono: 'DM Mono', monospace;
+      --serif: 'Playfair Display', Georgia, serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* HEADER */
+    header {
+      padding: 48px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .logo {
+      font-family: var(--serif);
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 600;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    h1 span {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      max-width: 480px;
+    }
+
+    /* COUNTER BADGE */
+    .usage-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .usage-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border-hover);
+      transition: background 0.3s;
+    }
+
+    .dot.used { background: var(--accent); }
+
+    .usage-text {
+      font-size: 12px;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .usage-text strong { color: var(--text); }
+
+    .upgrade-link {
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid rgba(200,184,154,0.3);
+      padding-bottom: 1px;
+      transition: border-color 0.2s;
+    }
+
+    .upgrade-link:hover { border-color: var(--accent); }
+
+    /* FORM */
+    .form-section { margin-bottom: 40px; }
+
+    .field { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    textarea, select, input[type="text"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    textarea:focus, select:focus, input[type="text"]:focus {
+      border-color: var(--border-hover);
+    }
+
+    textarea { min-height: 120px; }
+
+    select {
+      appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a7570' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    select option { background: #1e1e1e; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    @media (max-width: 520px) { .row-2 { grid-template-columns: 1fr; } }
+
+    /* GENERATE BUTTON */
+    .btn-generate {
+      width: 100%;
+      padding: 16px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #0d0d0d;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-generate:hover { opacity: 0.88; }
+    .btn-generate:active { transform: scale(0.99); }
+    .btn-generate:disabled { opacity: 0.35; cursor: default; }
+
+    /* OUTPUT */
+    #output { margin-top: 48px; }
+
+    .output-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-title {
+      font-family: var(--serif);
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .output-meta {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .shot-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shot-num {
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      margin-bottom: 8px;
+    }
+
+    .shot-desc {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .shot-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 3px;
+      letter-spacing: 0.06em;
+    }
+
+    .tag-angle { background: rgba(200,184,154,0.1); color: var(--accent); }
+    .tag-move { background: rgba(74,170,122,0.1); color: var(--success); }
+    .tag-lens { background: rgba(255,255,255,0.05); color: var(--muted); }
+    .tag-dur { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+    .btn-copy {
+      margin-top: 24px;
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid var(--border-hover);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-copy:hover { color: var(--text); border-color: var(--border-hover); }
+
+    /* LOADING */
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 32px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--border-hover);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ERROR */
+    .error-msg {
+      padding: 16px;
+      background: rgba(224,90,74,0.08);
+      border: 1px solid rgba(224,90,74,0.2);
+      border-radius: 6px;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    /* LIMIT REACHED */
+    .limit-box {
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border-hover);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .limit-box h3 {
+      font-family: var(--serif);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .limit-box p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .btn-upgrade {
+      display: inline-block;
+      padding: 12px 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      color: #0d0d0d;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    /* FOOTER */
+    footer {
+      margin-top: 80px;
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-text { font-size: 12px; color: var(--muted); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 12px; color: var(--muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--text); }
+
+    /* AD PLACEHOLDER */
+    .ad-slot {
+      margin: 40px 0;
+      padding: 20px;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header>
+      <div class="logo">Shot List Generator</div>
+      <h1>Your scene.<br /><span>Professional shots.</span></h1>
+      <p class="tagline">Describe your scene and get a complete shot list — angles, movements, lenses, timing. Free for filmmakers.</p>
+    </header>
+
+    <div class="usage-bar">
+      <div class="usage-dots" id="dots"></div>
+      <div class="usage-text" id="usageText">Loading...</div>
+      <a href="#upgrade" class="upgrade-link" id="upgradeLink" style="display:none">Go Pro →</a>
+    </div>
+
+    <div class="form-section">
+      <div class="field">
+        <label>Scene description</label>
+        <textarea id="scene" placeholder="e.g. A detective enters an abandoned warehouse at night, flashlight in hand. She hears a noise from above and slowly looks up..."></textarea>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Video type</label>
+          <select id="videoType">
+            <option value="short film">Short film / Fiction</option>
+            <option value="YouTube video">YouTube video</option>
+            <option value="music video">Music video</option>
+            <option value="documentary">Documentary</option>
+            <option value="wedding video">Wedding video</option>
+            <option value="commercial">Commercial / Ad</option>
+            <option value="social media reel">Social media reel</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Mood / Style</label>
+          <select id="mood">
+            <option value="cinematic and tense">Cinematic & tense</option>
+            <option value="warm and intimate">Warm & intimate</option>
+            <option value="fast-paced and energetic">Fast-paced & energetic</option>
+            <option value="dreamy and poetic">Dreamy & poetic</option>
+            <option value="raw and documentary-style">Raw & documentary</option>
+            <option value="clean and commercial">Clean & commercial</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Number of shots</label>
+        <select id="numShots">
+          <option value="6">6 shots</option>
+          <option value="10" selected>10 shots</option>
+          <option value="15">15 shots</option>
+        </select>
+      </div>
+
+      <button class="btn-generate" id="generateBtn" onclick="generate()">
+        Generate Shot List
+      </button>
+    </div>
+
+    <!-- Ad slot (replace with AdSense code) -->
+    <div class="ad-slot">advertisement</div>
+
+    <div id="output"></div>
+
+    <!-- Ad slot -->
+    <div class="ad-slot" id="adBottom" style="display:none">advertisement</div>
+
+    <footer>
+      <div class="footer-text">© 2025 Shot List Generator</div>
+      <div class="footer-links">
+        <a href="#privacy">Privacy</a>
+        <a href="#terms">Terms</a>
+        <a href="mailto:hello@example.com">Contact</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const FREE_LIMIT = 3;
+    const STORAGE_KEY = 'slg_usage';
+
+    function getUsage() {
+      try {
+        const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const today = new Date().toDateString();
+        if (d.date !== today) return { count: 0, date: today };
+        return d;
+      } catch { return { count: 0, date: new Date().toDateString() }; }
+    }
+
+    function saveUsage(u) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    }
+
+    function renderUsage() {
+      const u = getUsage();
+      const remaining = Math.max(0, FREE_LIMIT - u.count);
+      const dots = document.getElementById('dots');
+      const text = document.getElementById('usageText');
+      const link = document.getElementById('upgradeLink');
+
+      dots.innerHTML = '';
+      for (let i = 0; i < FREE_LIMIT; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i < u.count ? ' used' : '');
+        dots.appendChild(d);
+      }
+
+      if (remaining > 0) {
+        text.innerHTML = `<strong>${remaining}</strong> free generation${remaining !== 1 ? 's' : ''} left today`;
+        link.style.display = 'none';
+      } else {
+        text.innerHTML = `Daily free limit reached`;
+        link.style.display = 'block';
+      }
+    }
+
+    function canGenerate() {
+      return getUsage().count < FREE_LIMIT;
+    }
+
+    async function generate() {
+      if (!canGenerate()) {
+        showLimitReached();
+        return;
+      }
+
+      const scene = document.getElementById('scene').value.trim();
+      if (!scene) {
+        alert('Please describe your scene first.');
+        return;
+      }
+
+      const videoType = document.getElementById('videoType').value;
+      const mood = document.getElementById('mood').value;
+      const numShots = document.getElementById('numShots').value;
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      const output = document.getElementById('output');
+      output.innerHTML = '<div class="loading"><div class="spinner"></div>Building your shot list...</div>';
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scene, videoType, mood, numShots: parseInt(numShots) })
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || 'Server error');
+        }
+
+        const data = await response.json();
+        renderShots(data.shots, data.title);
+
+        const u = getUsage();
+        u.count++;
+        saveUsage(u);
+        renderUsage();
+
+        document.getElementById('adBottom').style.display = 'block';
+
+      } catch (e) {
+        output.innerHTML = `<div class="error-msg">Something went wrong: ${e.message}. Please try again.</div>`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Generate Shot List';
+    }
+
+    function renderShots(shots, title) {
+      const output = document.getElementById('output');
+
+      let html = `<div class="output-header">
+        <div class="output-title">${escHtml(title || 'Shot List')}</div>
+        <div class="output-meta">${shots.length} shots</div>
+      </div>`;
+
+      shots.forEach((shot, i) => {
+        html += `<div class="shot-card" style="animation-delay:${i * 0.05}s">
+          <div class="shot-num">SHOT ${String(i + 1).padStart(2, '0')}</div>
+          <div class="shot-desc">${escHtml(shot.description)}</div>
+          <div class="shot-tags">
+            ${shot.angle ? `<span class="tag tag-angle">${escHtml(shot.angle)}</span>` : ''}
+            ${shot.movement ? `<span class="tag tag-move">${escHtml(shot.movement)}</span>` : ''}
+            ${shot.lens ? `<span class="tag tag-lens">${escHtml(shot.lens)}</span>` : ''}
+            ${shot.duration ? `<span class="tag tag-dur">${escHtml(shot.duration)}</span>` : ''}
+          </div>
+        </div>`;
+      });
+
+      html += `<button class="btn-copy" onclick="copyAll()">Copy as text</button>`;
+      output.innerHTML = html;
+      output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showLimitReached() {
+      document.getElementById('output').innerHTML = `
+        <div class="limit-box">
+          <h3>Daily limit reached</h3>
+          <p>You've used all 3 free generations for today.<br/>Come back tomorrow — or go Pro for unlimited access.</p>
+          <a href="#upgrade" class="btn-upgrade">Go Pro — €7/month</a>
+        </div>`;
+    }
+
+    function copyAll() {
+      const cards = document.querySelectorAll('.shot-card');
+      let text = '';
+      cards.forEach((card, i) => {
+        const desc = card.querySelector('.shot-desc').textContent;
+        const tags = [...card.querySelectorAll('.tag')].map(t => t.textContent).join(' · ');
+        text += `SHOT ${String(i + 1).padStart(2, '0')}\n${desc}\n${tags}\n\n`;
+      });
+      navigator.clipboard.writeText(text.trim()).then(() => {
+        const btn = document.querySelector('.btn-copy');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy as text', 2000);
+      });
+    }
+
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    renderUsage();
+  </script>
+</body>
+</html>
