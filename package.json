@@ -1,0 +1,9 @@
+{
+  "name": "shot-list-generator",
+  "version": "1.0.0",
+  "description": "AI-powered shot list generator for filmmakers",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  }
+}
